@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="card mb-4 shadow-sm border-0 bg-light">
+        <div class="card-body p-4">
+            <h1 class="h3 font-weight-bold text-dark mb-2">
+                <i class="fas fa-database text-primary mr-2"></i>Data Asset Attribute Refinement
+            </h1>
+            <p class="text-muted mb-0">
+                Refine and enrich the cybersecurity and privacy properties for each data object associated with the process <strong>{{ nameprocess }}</strong>. These parameters dynamically influence the BPMN4CH threat scoring matrices.
+            </p>
+        </div>
+    </div>
+
+    <input type="hidden" value="{{ actors }}" id="actors">
+
+    <h4 class="font-weight-bold text-dark mb-3 mt-4">
+        <i class="fas fa-list-alt text-secondary mr-2"></i>Extracted Data Objects Repository
+    </h4>
+    <p class="text-muted small mb-4">The following data records were discovered inside the process structure. Configure their properties to compute risk responses:</p>
+
+    <div id="modern-cards-container">
+        {% for data in list_data %}
+        <div class="card shadow-sm border-0 bg-white mb-4 asset-card" data-asset-index="{{ forloop.counter0 }}">
+            <div class="card-body p-4">
+                
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3 flex-wrap">
+                    <div>
+                        <span class="text-uppercase text-primary font-weight-bold small" style="letter-spacing: 0.05em;">
+                            <i class="fas fa-file-invoice mr-1"></i> Data Asset
+                        </span>
+                        <h5 class="font-weight-bold text-dark mb-0 mt-1">{{ data }}</h5>
+                    </div>
+                    <div class="mt-2 mt-sm-0 d-flex align-items-center">
+                        {% if data.asset_type %}
+                            <span class="badge badge-info small text-uppercase mt-1 shadow-xs font-weight-bold" style="font-size: 70%; letter-spacing: 0.05em;">
+                                <i class="fas fa-cube mr-1 text-muted"></i> Topology: {{ data.asset_type }}
+                            </span>
+                        {% endif %}
+                        
+                        <!-- AI SUGGESTION BUTTON -->
+                        <button type="button" 
+                                class="btn btn-xs btn-outline-info font-weight-bold btn-ai-dataobject shadow-xs py-1 px-3" 
+                                style="border-radius: 15px; font-size: 78%;"
+                                data-index="{{ forloop.counter0 }}" 
+                                data-name="{{ data }}">
+                            <i class="fas fa-magic mr-1"></i> Suggest with AI
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="font-weight-bold text-muted small text-uppercase mb-2 d-block">Asset Topology</label>
+                        {% if data.asset_type is not None %}
+                            <input type="text" class="form-control form-control-sm bg-light font-weight-bold" value="{{ data.asset_type }}" readonly>
+                        {% else %}
+                            <select class="form-control form-control-sm custom-select card-sync-type" data-index="{{ forloop.counter0 }}">
+                                <option value="Data Object" selected>Data Object</option>
+                                <option value="Data Store">Data Store</option>
+                            </select>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label class="font-weight-bold text-muted small text-uppercase mb-2 d-block">Data Payload Size</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" class="form-control text-center font-weight-bold card-sync-size" data-index="{{ forloop.counter0 }}" value="1" min="1">
+                            <select class="form-control custom-select card-sync-order" data-index="{{ forloop.counter0 }}">
+                                <option value="byte" selected>Byte</option>
+                                <option value="kb">KB</option>
+                                <option value="mb">MB</option>
+                                <option value="gb">GB</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="font-weight-bold text-muted small text-uppercase mb-2 d-block">GDPR Classification</label>
+                        <select class="form-control form-control-sm custom-select card-sync-personal" data-index="{{ forloop.counter0 }}">
+                            <option value="1">Yes (Contains PII / Confidential Records)</option>
+                            <option value="0" selected>No (Public Non-Personal Logs)</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2 mb-3">
+                        <label class="font-weight-bold text-muted small text-uppercase mb-2 d-block">Load Dep.</label>
+                        <input type="number" class="form-control form-control-sm text-center font-weight-bold card-sync-load" data-index="{{ forloop.counter0 }}" value="1" min="1">
+                    </div>
+                </div>
+
+                <!-- AI RATIONALE BOX -->
+                <div id="ai-reason-data-{{ forloop.counter0 }}" class="alert alert-info py-2 px-3 mb-2 d-none font-italic" style="font-size: 82%; border-left: 3px solid #17a2b8;"></div>
+                
+                {% if not data.default_actor and actors_manage_data is empty %}
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <div class="bg-light p-3 rounded border">
+                            <label class="font-weight-bold text-secondary small text-uppercase mb-2 d-block">
+                                <i class="fas fa-user-shield mr-1"></i> Assign Security Custodian Actor
+                            </label>
+                            <select class="form-control form-control-sm custom-select card-sync-actor" data-index="{{ forloop.counter0 }}">
+                                <option value="" selected disabled>Select the actor that uses this DataObject</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- OPERATIVE FORM -->
+    <form method="POST" action="{% url 'save_dataobject' systemId=systemId processId=processId %}" id="operativeLegacyForm">
+        {% csrf_token %}
+        
+        <table class="table d-none" id="legacyTable">
+            <tbody>
+                {% for data in list_data %}
+                <tr>
+                    <td><b>{{ data }}</b></td>
+                    
+                    <td>
+                        {% if data.asset_type is not None %}
+                            {{ data.asset_type }}
+                        {% else %}
+                            <select id="type-target-{{ forloop.counter0 }}" name="{{ data }}">
+                                <option value="Data Object" selected>Data Object</option>
+                                <option value="Data Store">Data Store</option>
+                            </select>
+                        {% endif %}
+                    </td>
+                    
+                    <td>
+                        <input type="number" id="size-target-{{ forloop.counter0 }}" name="{{ data }}" value="1">
+                        <select id="order-target-{{ forloop.counter0 }}" name="{{ data }}">
+                            <option value="byte" selected>byte</option>
+                            <option value="kb">kb</option>
+                            <option value="mb">mb</option>
+                            <option value="gb">gb</option>
+                        </select>
+                        <select id="personal-target-{{ forloop.counter0 }}" name="{{ data }}">
+                            <option value="1">1</option>
+                            <option value="0" selected>0</option>
+                        </select>
+                        <input type="number" id="load-target-{{ forloop.counter0 }}" name="{{ data }}" value="1">
+                    </td>
+                    
+                    <td>
+                        {% if actors_manage_data %}
+                            {% for actor_manage_data in actors_manage_data %}
+                                {% if data.name == actor_manage_data.data.name %}
+                                    {{ actor_manage_data.actor.name }}
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <select id="actor-target-{{ forloop.counter0 }}" name="{{ data.bpmn_id }}">
+                            </select>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- SAVE BUTTON -->
+        <div class="text-center mt-4 mb-5">
+            <button type="submit" class="btn btn-success font-weight-bold px-5 py-2 shadow-sm rounded-pill">
+                <i class="fas fa-save mr-2"></i> Save Attributes & Run Modeling
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let actorsData = [];
+    const actorsInput = document.getElementById('actors');
+    if (actorsInput && actorsInput.value) {
+        try {
+            actorsData = JSON.parse(actorsInput.value);
+        } catch(err) {
+            console.log("Attori non in formato JSON standard, proseguimento standard.");
+        }
+    }
+
+    document.querySelectorAll('.card-sync-actor').forEach(function(cardSelect) {
+        const idx = cardSelect.getAttribute('data-index');
+        const legacySelect = document.getElementById('actor-target-' + idx);
+
+        if (actorsData && actorsData.length > 0) {
+            actorsData.forEach(function(act) {
+                const name = act.fields ? act.fields.name : (act.name || act);
+                
+                if (legacySelect) {
+                    const optLegacy = document.createElement('option');
+                    optLegacy.value = name;
+                    optLegacy.textContent = name;
+                    legacySelect.appendChild(optLegacy);
+                }
+
+                const optCard = document.createElement('option');
+                optCard.value = name;
+                optCard.textContent = name;
+                cardSelect.appendChild(optCard);
+            });
+        }
+    });
+
+    document.body.addEventListener('input', function(e) {
+        const idx = e.target.dataset.index;
+        if (!idx) return;
+
+        if (e.target.classList.contains('card-sync-size')) {
+            const el = document.getElementById('size-target-' + idx);
+            if (el) el.value = e.target.value;
+        }
+        if (e.target.classList.contains('card-sync-load')) {
+            const el = document.getElementById('load-target-' + idx);
+            if (el) el.value = e.target.value;
+        }
+    });
+
+    document.body.addEventListener('change', function(e) {
+        const idx = e.target.dataset.index;
+        if (!idx) return;
+
+        if (e.target.classList.contains('card-sync-type')) {
+            const el = document.getElementById('type-target-' + idx);
+            if (el) el.value = e.target.value;
+        }
+        if (e.target.classList.contains('card-sync-order')) {
+            const el = document.getElementById('order-target-' + idx);
+            if (el) el.value = e.target.value;
+        }
+        if (e.target.classList.contains('card-sync-personal')) {
+            const el = document.getElementById('personal-target-' + idx);
+            if (el) el.value = e.target.value;
+        }
+        if (e.target.classList.contains('card-sync-actor')) {
+            const el = document.getElementById('actor-target-' + idx);
+            if (el) el.value = e.target.value;
+        }
+    });
+
+    // Gestione Chiamata AI
+    document.querySelectorAll('.btn-ai-dataobject').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const idx = this.getAttribute('data-index');
+            const dataName = this.getAttribute('data-name');
+            const reasonBox = document.getElementById('ai-reason-data-' + idx);
+
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Analyzing...';
+
+            fetch('/api/suggest-data-attribute/?data_name=' + encodeURIComponent(dataName))
+                .then(function(res) {
+                    if (!res.ok) throw new Error("Status: " + res.status);
+                    return res.json();
+                })
+                .then(function(data) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-magic mr-1"></i> Suggest with AI';
+
+                    if (data.status === 'ok' && data.result) {
+                        const res = data.result;
+
+                        // GDPR
+                        const personalSelect = document.querySelector('.card-sync-personal[data-index="' + idx + '"]');
+                        if (personalSelect) {
+                            personalSelect.value = String(res.personal);
+                            personalSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+
+                        // Payload Size
+                        if (res.size) {
+                            const sizeInput = document.querySelector('.card-sync-size[data-index="' + idx + '"]');
+                            if (sizeInput) {
+                                sizeInput.value = res.size;
+                                sizeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+                        }
+
+                        // Order of Size
+                        let orderVal = (res.order_of_size || 'byte').toLowerCase();
+                        if (orderVal === 'kilobyte') orderVal = 'kb';
+                        if (orderVal === 'megabyte') orderVal = 'mb';
+                        if (orderVal === 'gigabyte') orderVal = 'gb';
+
+                        const orderSelect = document.querySelector('.card-sync-order[data-index="' + idx + '"]');
+                        if (orderSelect) {
+                            orderSelect.value = orderVal;
+                            orderSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+
+                        // Load Dependence
+                        if (res.load_dependence) {
+                            const loadInput = document.querySelector('.card-sync-load[data-index="' + idx + '"]');
+                            if (loadInput) {
+                                loadInput.value = res.load_dependence;
+                                loadInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+                        }
+
+                        // Box Motivazione
+                        if (reasonBox && res.reason) {
+                            reasonBox.classList.remove('d-none');
+                            reasonBox.innerHTML = '<i class="fas fa-brain mr-1"></i> <strong>AI Assessment:</strong> ' + res.reason;
+                        }
+                    } else {
+                        alert('No attributes returned by model.');
+                    }
+                })
+                .catch(function(err) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-magic mr-1"></i> Suggest with AI';
+                    console.error(err);
+                    alert('Communication error with Ollama.');
+                });
+        });
+    });
+});
+</script>
+
+<style>
+    .shadow-xs { box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; }
+    .asset-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .asset-card:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.06) !important; }
+</style>
+{% endblock %}

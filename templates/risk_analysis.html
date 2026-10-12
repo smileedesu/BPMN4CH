@@ -1,0 +1,575 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Titolo e Header -->
+    <div class="text-center mb-4">
+        <h1 class="h3 font-weight-bold text-dark">Risks Evaluation for ({{ assetName|default:"Asset" }})</h1>
+        <p class="text-muted small max-w-75 mx-auto">
+            By following the approach here, it is possible to estimate the severity of all of these risks to the business and make an informed decision about what to do about those risks. Having a system in place for rating risks will save time and eliminate arguing about priorities.
+        </p>
+        
+        <form method="POST" action="{% url 'threat_modeling_view' systemId=systemId processId=processId %}" class="d-inline-block mt-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary px-4 font-weight-bold shadow-sm">
+                <i class="fas fa-arrow-left mr-1"></i> Back
+            </button>
+        </form>
+    </div>
+
+    <!-- BOX ASSISTENTE AI & HUMAN-IN-THE-LOOP: UPLOAD POLICY & FATTORI OWASP EDITABILI -->
+    <div class="card border-primary shadow-sm mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold">
+                <i class="fas fa-file-contract mr-2"></i>Valutazione Impatto Contestuale OWASP tramite Documento di Policy
+            </h6>
+            <span class="badge badge-light text-primary font-weight-bold">Llama 3.2 On-Premise (3B)</span>
+        </div>
+        <div class="card-body bg-light">
+            <p class="text-muted small mb-3">
+                Carica il disciplinare di prestito o la policy istituzionale (file <strong>.docx</strong> o <strong>.txt</strong>). Il modello locale estrarrà come suggerimento iniziale gli <strong>8 fattori di impatto OWASP</strong> con le relative evidenze. In ottica <strong>Human-in-the-Loop</strong>, l'amministratore può modificare liberamente ciascun punteggio (1-9) per adattarlo al contesto specifico dell'istituto.
+            </p>
+
+            <div class="row align-items-center">
+                <div class="col-md-7 mb-2 mb-md-0">
+                    <div class="input-group">
+                        <input type="file" id="policy-file-input" class="form-control-file border bg-white p-1 rounded" accept=".docx,.txt">
+                    </div>
+                </div>
+                <div class="col-md-5 text-md-right">
+                    <button type="button" class="btn btn-primary font-weight-bold shadow-sm px-3" id="btn-suggest-risk-appetite">
+                        <i class="fas fa-microchip mr-1"></i> Analizza Documento con AI
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Box dinamico per evidenze e punteggi OWASP estratti ed editabili -->
+            <div id="ai-feedback-container" class="mt-4 p-3 bg-white border rounded shadow-sm" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2 flex-wrap">
+                    <strong class="text-dark">
+                        <i class="fas fa-balance-scale mr-1 text-primary"></i> Parametri OWASP di Impatto (Suggeriti da AI & Modificabili dall'Amministratore):
+                    </strong>
+                    <div id="owasp-scores-summary" class="small font-weight-bold text-secondary mt-1 mt-md-0"></div>
+                </div>
+
+                <div id="ai-rationale-list" class="mt-2 mb-0"></div>
+
+                <div class="text-right mt-3 pt-2 border-top">
+                    <span class="small text-muted mr-3"><i class="fas fa-info-circle mr-1"></i>I valori possono essere editati singolarmente nella tabella.</span>
+                    <button type="button" class="btn btn-success btn-sm font-weight-bold px-3 shadow-xs" id="btn-recalculate-owasp">
+                        <i class="fas fa-sync-alt mr-1"></i> Applica e Ricalcola Rischi
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabella Sintetica STRIDE Arricchita -->
+    <div class="card shadow-sm border-0 mb-5">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="border-0 px-4 py-3 font-weight-bold text-dark">Stride category</th>
+                        <th class="border-0 px-4 py-3 text-center font-weight-bold text-dark" style="width: 200px;">Risk Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Spoofing -->
+                    <tr class="clickable-row" onclick="scrollToCategory('spoofing')" style="cursor: pointer;">
+                        <td class="px-4 align-middle font-weight-bold text-secondary">
+                            <div>Spoofing</div>
+                        </td>
+                        <td class="px-4 text-center align-middle">
+                            {% if spoofing == 'HIGH' or spoofing == 'CRITICAL' %}
+                                <span class="badge badge-danger px-3 py-2 font-weight-bold" id="badge-spoofing">{{ spoofing }}</span>
+                            {% elif spoofing == 'MEDIUM' %}
+                                <span class="badge badge-warning text-dark px-3 py-2 font-weight-bold" id="badge-spoofing">MEDIUM</span>
+                            {% else %}
+                                <span class="badge badge-success px-3 py-2 font-weight-bold" id="badge-spoofing">{{ spoofing|default:"LOW" }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    
+                    <!-- Tampering -->
+                    <tr class="clickable-row" onclick="scrollToCategory('tampering')" style="cursor: pointer;">
+                        <td class="px-4 align-middle font-weight-bold text-secondary">
+                            <div>Tampering</div>
+                        </td>
+                        <td class="px-4 text-center align-middle">
+                            {% if tampering == 'HIGH' or tampering == 'CRITICAL' %}
+                                <span class="badge badge-danger px-3 py-2 font-weight-bold" id="badge-tampering">{{ tampering }}</span>
+                            {% elif tampering == 'MEDIUM' %}
+                                <span class="badge badge-warning text-dark px-3 py-2 font-weight-bold" id="badge-tampering">MEDIUM</span>
+                            {% else %}
+                                <span class="badge badge-success px-3 py-2 font-weight-bold" id="badge-tampering">{{ tampering|default:"LOW" }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <!-- Repudiation -->
+                    <tr class="clickable-row" onclick="scrollToCategory('repudiation')" style="cursor: pointer;">
+                        <td class="px-4 align-middle font-weight-bold text-secondary">
+                            <div>Repudiation</div>
+                        </td>
+                        <td class="px-4 text-center align-middle">
+                            {% if repudiation == 'HIGH' or repudiation == 'CRITICAL' %}
+                                <span class="badge badge-danger px-3 py-2 font-weight-bold" id="badge-repudiation">{{ repudiation }}</span>
+                            {% elif repudiation == 'MEDIUM' %}
+                                <span class="badge badge-warning text-dark px-3 py-2 font-weight-bold" id="badge-repudiation">MEDIUM</span>
+                            {% else %}
+                                <span class="badge badge-success px-3 py-2 font-weight-bold" id="badge-repudiation">{{ repudiation|default:"LOW" }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <!-- Information Disclosure -->
+                    <tr class="clickable-row" onclick="scrollToCategory('information-disclosure')" style="cursor: pointer;">
+                        <td class="px-4 align-middle font-weight-bold text-secondary">
+                            <div>Information Disclosure</div>
+                        </td>
+                        <td class="px-4 text-center align-middle">
+                            {% if informationdis == 'HIGH' or informationdis == 'CRITICAL' %}
+                                <span class="badge badge-danger px-3 py-2 font-weight-bold" id="badge-informationdisclosure">{{ informationdis }}</span>
+                            {% elif informationdis == 'MEDIUM' %}
+                                <span class="badge badge-warning text-dark px-3 py-2 font-weight-bold" id="badge-informationdisclosure">MEDIUM</span>
+                            {% else %}
+                                <span class="badge badge-success px-3 py-2 font-weight-bold" id="badge-informationdisclosure">{{ informationdis|default:"LOW" }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <!-- Denial of Service -->
+                    <tr class="clickable-row" onclick="scrollToCategory('denial-of-service')" style="cursor: pointer;">
+                        <td class="px-4 align-middle font-weight-bold text-secondary">
+                            <div>Denial of Service</div>
+                        </td>
+                        <td class="px-4 text-center align-middle">
+                            {% if dos == 'HIGH' or dos == 'CRITICAL' %}
+                                <span class="badge badge-danger px-3 py-2 font-weight-bold" id="badge-dos">{{ dos }}</span>
+                            {% elif dos == 'MEDIUM' %}
+                                <span class="badge badge-warning text-dark px-3 py-2 font-weight-bold" id="badge-dos">MEDIUM</span>
+                            {% else %}
+                                <span class="badge badge-success px-3 py-2 font-weight-bold" id="badge-dos">{{ dos|default:"LOW" }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <!-- Elevation of Privileges -->
+                    <tr class="clickable-row" onclick="scrollToCategory('elevation-of-privileges')" style="cursor: pointer;">
+                        <td class="px-4 align-middle font-weight-bold text-secondary">
+                            <div>Elevation of Privileges</div>
+                        </td>
+                        <td class="px-4 text-center align-middle">
+                            {% if eop == 'HIGH' or eop == 'CRITICAL' %}
+                                <span class="badge badge-danger px-3 py-2 font-weight-bold" id="badge-elevationofprivileges">{{ eop }}</span>
+                            {% elif eop == 'MEDIUM' %}
+                                <span class="badge badge-warning text-dark px-3 py-2 font-weight-bold" id="badge-elevationofprivileges">MEDIUM</span>
+                            {% else %}
+                                <span class="badge badge-success px-3 py-2 font-weight-bold" id="badge-elevationofprivileges">{{ eop|default:"LOW" }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Sezione Dettagli Rischi (Risks in Details) -->
+    <div class="mt-5">
+        <h2 class="h4 font-weight-bold text-dark text-center mb-4">
+            <i class="fas fa-list-ul mr-2 text-primary"></i>Risks in details
+        </h2>
+
+        <div class="row">
+            {% for risk_item in risk_list %}
+            {% with r=risk_item.0|default:risk_item %}
+            <div class="col-12 mb-3 risk-detail-card" data-category="{{ r.threat_stride.stride.category|default:'general'|slugify }}">
+                <div class="card shadow-sm border-0 bg-white">
+                    <div class="card-body p-4 border-left-primary">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="font-weight-bold text-dark mb-0">
+                                <i class="fas fa-shield-virus text-primary mr-2"></i>
+                                {{ r.threat_stride.threat.name|default:"Identified Threat Vector" }}
+                            </h5>
+                            
+                            <!-- Severità del Rischio -->
+                            {% if r.severity == 'HIGH' or r.severity == 'CRITICAL' %}
+                                <span class="badge badge-danger px-3 py-2 font-weight-bold risk-badge-detail">{{ r.severity }} RISK</span>
+                            {% elif r.severity == 'MEDIUM' %}
+                                <span class="badge badge-warning text-dark px-3 py-2 font-weight-bold risk-badge-detail">MEDIUM RISK</span>
+                            {% else %}
+                                <span class="badge badge-success px-3 py-2 font-weight-bold risk-badge-detail">{{ r.severity|default:"LOW" }} RISK</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Dettagli dell'impatto e probabilità -->
+                        <div class="row mt-3">
+                            <div class="col-md-4">
+                                <div class="bg-light p-2 rounded text-center">
+                                    <span class="small text-muted d-block font-weight-bold">Likelihood</span>
+                                    <span class="font-weight-bold text-dark likelihood-val">{{ r.likelihood|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mt-2 mt-md-0">
+                                <div class="bg-light p-2 rounded text-center">
+                                    <span class="small text-muted d-block font-weight-bold">Impact</span>
+                                    <span class="font-weight-bold text-dark impact-val">{{ r.impact|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mt-2 mt-md-0">
+                                <div class="bg-light p-2 rounded text-center">
+                                    <span class="small text-muted d-block font-weight-bold">Category</span>
+                                    <span class="font-weight-bold text-dark category-val">{{ r.threat_stride.stride.category|default:"STRIDE" }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if r.threat_stride.threat.description %}
+                            <hr class="mt-4 mb-3">
+                            <p class="text-muted small mb-0" style="text-align: justify; line-height: 1.5;">
+                                <strong>Description:</strong> {{ r.threat_stride.threat.description }}
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endwith %}
+            {% empty %}
+            <div class="col-12 text-center py-5">
+                <div class="alert alert-light border shadow-xs" role="alert">
+                    <i class="fas fa-info-circle text-primary fa-2x mb-2 d-block"></i>
+                    <span class="text-muted">No detailed risk records found for the selected process and asset context.</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .border-left-primary {
+        border-left: 4px solid #4e73df !important;
+    }
+    .clickable-row:hover {
+        background-color: #f8f9fc !important;
+    }
+    .owasp-input {
+        width: 70px;
+        text-align: center;
+        font-weight: bold;
+        display: inline-block;
+    }
+</style>
+
+<!-- Script per scrollare ai dettagli -->
+<script>
+    function scrollToCategory(categoryId) {
+        var card = document.querySelector('.risk-detail-card[data-category="' + categoryId + '"]');
+        if (card) {
+            card.style.transition = "box-shadow 0.5s ease-in-out";
+            card.style.boxShadow = "0 0 15px rgba(78, 115, 223, 0.5)";
+            
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            setTimeout(function() {
+                card.style.boxShadow = "";
+            }, 1500);
+        }
+    }
+
+    // Funzione helper per determinare classe e testo del badge in base allo score 1-9
+    function getBadgeInfo(val) {
+        if (val >= 7) return { class: 'badge-danger', text: 'HIGH' };
+        if (val >= 4) return { class: 'badge-warning text-dark', text: 'MEDIUM' };
+        return { class: 'badge-success', text: 'LOW' };
+    }
+
+    // Matrice di Severità OWASP standard per combinare Likelihood e Impact
+    function calculateOwaspSeverity(likelihood, impact) {
+        if (impact >= 6) {
+            if (likelihood < 3) return "MEDIUM";
+            if (likelihood < 6) return "HIGH";
+            return "CRITICAL";
+        } else if (impact >= 3) {
+            if (likelihood < 3) return "LOW";
+            if (likelihood < 6) return "MEDIUM";
+            return "HIGH";
+        } else {
+            if (likelihood < 3) return "VERY LOW";
+            if (likelihood < 6) return "LOW";
+            return "MEDIUM";
+        }
+    }
+
+    // Ricalcolo algebrico dei totali OWASP (Technical, Business, Overall)
+    function recalculateOwaspMetrics() {
+        const getVal = (id) => parseFloat(document.getElementById(id)?.value) || 5;
+
+        // Parametri Tecnici
+        const c = getVal('input-confidentiality');
+        const i = getVal('input-integrity');
+        const a = getVal('input-availability');
+        const acc = getVal('input-accountability');
+        const techAvg = ((c + i + a + acc) / 4).toFixed(1);
+
+        // Parametri Business
+        const fin = getVal('input-financial');
+        const rep = getVal('input-reputation');
+        const non = getVal('input-noncompliance');
+        const priv = getVal('input-privacy');
+        const bizAvg = ((fin + rep + non + priv) / 4).toFixed(1);
+
+        // Overall Impact
+        const totalImpactAvg = ((parseFloat(techAvg) + parseFloat(bizAvg)) / 2).toFixed(1);
+
+        // Aggiornamento badge di riga nella tabella degli 8 fattori
+        const updateRowBadge = (inputId, badgeId) => {
+            const val = getVal(inputId);
+            const badge = document.getElementById(badgeId);
+            if (badge) {
+                const info = getBadgeInfo(val);
+                badge.className = `badge ${info.class}`;
+                badge.innerText = info.text;
+            }
+        };
+
+        updateRowBadge('input-confidentiality', 'badge-factor-confidentiality');
+        updateRowBadge('input-integrity', 'badge-factor-integrity');
+        updateRowBadge('input-availability', 'badge-factor-availability');
+        updateRowBadge('input-accountability', 'badge-factor-accountability');
+        updateRowBadge('input-financial', 'badge-factor-financial');
+        updateRowBadge('input-reputation', 'badge-factor-reputation');
+        updateRowBadge('input-noncompliance', 'badge-factor-noncompliance');
+        updateRowBadge('input-privacy', 'badge-factor-privacy');
+
+        // Aggiornamento del riepilogo in alto a destra
+        const summarySpan = document.getElementById('owasp-scores-summary');
+        if (summarySpan) {
+            summarySpan.innerHTML = `Technical Impact: <span class="badge badge-info">${techAvg}/9</span> | Business Impact: <span class="badge badge-info">${bizAvg}/9</span> | Overall Impact: <span class="badge badge-primary">${totalImpactAvg}/9</span>`;
+        }
+
+        return { techAvg: parseFloat(techAvg), bizAvg: parseFloat(bizAvg), totalImpact: parseFloat(totalImpactAvg) };
+    }
+
+    // GESTIONE ASSISTENTE AI: UPLOAD POLICY E GENERAZIONE FATTORI OWASP EDITABILI
+    document.getElementById('btn-suggest-risk-appetite')?.addEventListener('click', function() {
+        const btn = this;
+        const fileInput = document.getElementById('policy-file-input');
+        const feedbackBox = document.getElementById('ai-feedback-container');
+        const list = document.getElementById('ai-rationale-list');
+
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert("Seleziona prima il file Word (.docx) o Testo (.txt) contenente la policy prima di avviare l'analisi.");
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('policy_file', file);
+        formData.append('name', "{{ assetName|default:'Fascicolo di prestito' }}");
+        formData.append('type', 'Asset');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-1"></span> Estrazione parametri OWASP...';
+
+        fetch('/api/evaluate-risk-appetite/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-microchip mr-1"></i> Analizza Documento con AI';
+
+            if (data.status === 'ok' && data.result) {
+                feedbackBox.style.display = 'block';
+                list.innerHTML = '';
+
+                const f = data.result.owasp_impact_factors || {};
+
+                // 1. GENERAZIONE TABELLA CON INPUT NUMERICI EDITABILI (1-9)
+                const owaspTableHtml = `
+                    <div class="table-responsive my-2">
+                        <table class="table table-sm table-bordered bg-white mb-0 align-middle">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width: 25%;">Dimensione OWASP</th>
+                                    <th style="width: 35%;">Fattore di Impatto</th>
+                                    <th style="width: 20%;" class="text-center">Score (Editabile 1-9)</th>
+                                    <th style="width: 20%;" class="text-center">Livello</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td rowspan="4" class="align-middle font-weight-bold bg-light">Technical Impact Factors (CIA+A)</td>
+                                    <td>Loss of Confidentiality</td>
+                                    <td class="text-center">
+                                        <input type="number" id="input-confidentiality" class="form-control form-control-sm owasp-input mx-auto" min="1" max="9" value="${f.loss_of_confidentiality || 7}">
+                                    </td>
+                                    <td class="text-center"><span id="badge-factor-confidentiality" class="badge"></span></td>
+                                </tr>
+                                <tr>
+                                    <td>Loss of Integrity</td>
+                                    <td class="text-center">
+                                        <input type="number" id="input-integrity" class="form-control form-control-sm owasp-input mx-auto" min="1" max="9" value="${f.loss_of_integrity || 9}">
+                                    </td>
+                                    <td class="text-center"><span id="badge-factor-integrity" class="badge"></span></td>
+                                </tr>
+                                <tr>
+                                    <td>Loss of Availability</td>
+                                    <td class="text-center">
+                                        <input type="number" id="input-availability" class="form-control form-control-sm owasp-input mx-auto" min="1" max="9" value="${f.loss_of_availability || 8}">
+                                    </td>
+                                    <td class="text-center"><span id="badge-factor-availability" class="badge"></span></td>
+                                </tr>
+                                <tr>
+                                    <td>Loss of Accountability</td>
+                                    <td class="text-center">
+                                        <input type="number" id="input-accountability" class="form-control form-control-sm owasp-input mx-auto" min="1" max="9" value="${f.loss_of_accountability || 8}">
+                                    </td>
+                                    <td class="text-center"><span id="badge-factor-accountability" class="badge"></span></td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="4" class="align-middle font-weight-bold bg-light">Business Impact Factors</td>
+                                    <td>Financial Damage</td>
+                                    <td class="text-center">
+                                        <input type="number" id="input-financial" class="form-control form-control-sm owasp-input mx-auto" min="1" max="9" value="${f.financial_damage || 8}">
+                                    </td>
+                                    <td class="text-center"><span id="badge-factor-financial" class="badge"></span></td>
+                                </tr>
+                                <tr>
+                                    <td>Reputation Damage</td>
+                                    <td class="text-center">
+                                        <input type="number" id="input-reputation" class="form-control form-control-sm owasp-input mx-auto" min="1" max="9" value="${f.reputation_damage || 8}">
+                                    </td>
+                                    <td class="text-center"><span id="badge-factor-reputation" class="badge"></span></td>
+                                </tr>
+                                <tr>
+                                    <td>Non-Compliance</td>
+                                    <td class="text-center">
+                                        <input type="number" id="input-noncompliance" class="form-control form-control-sm owasp-input mx-auto" min="1" max="9" value="${f.non_compliance || 8}">
+                                    </td>
+                                    <td class="text-center"><span id="badge-factor-noncompliance" class="badge"></span></td>
+                                </tr>
+                                <tr>
+                                    <td>Privacy Violation</td>
+                                    <td class="text-center">
+                                        <input type="number" id="input-privacy" class="form-control form-control-sm owasp-input mx-auto" min="1" max="9" value="${f.privacy_violation || 6}">
+                                    </td>
+                                    <td class="text-center"><span id="badge-factor-privacy" class="badge"></span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                const tableContainer = document.createElement('div');
+                tableContainer.innerHTML = owaspTableHtml;
+                list.appendChild(tableContainer);
+
+                // Calcolo iniziale dei totali e attivazione listener su tutti gli input
+                recalculateOwaspMetrics();
+                document.querySelectorAll('.owasp-input').forEach(input => {
+                    input.addEventListener('input', function() {
+                        if (this.value > 9) this.value = 9;
+                        if (this.value < 1 && this.value !== '') this.value = 1;
+                        recalculateOwaspMetrics();
+                    });
+                });
+
+                // 2. INSERIMENTO EVIDENZE E QUOTE TESTUALI NELLE RIGHE DELLA TABELLA STRIDE
+                if (data.result.evaluations) {
+                    data.result.evaluations.forEach(ev => {
+                        let key = ev.category.toLowerCase().replace(/[\s_]+/g, '');
+                        if (key.includes('denial') || key === 'dos') key = 'dos';
+                        if (key.includes('privilege') || key.includes('escalation')) key = 'elevationofprivileges';
+                        if (key.includes('information') || key.includes('disclosure')) key = 'informationdisclosure';
+
+                        const targetBadge = document.getElementById(`badge-${key}`);
+                        if (targetBadge) {
+                            const badgeStyleMap = {
+                                "CRITICAL": { class: "badge badge-danger" },
+                                "HIGH": { class: "badge badge-danger" },
+                                "MEDIUM": { class: "badge badge-warning text-dark" },
+                                "LOW": { class: "badge badge-success" }
+                            };
+                            const styleInfo = badgeStyleMap[ev.severity.toUpperCase()] || badgeStyleMap["LOW"];
+                            targetBadge.className = `${styleInfo.class} px-3 py-2 font-weight-bold`;
+                            targetBadge.innerText = ev.severity.toUpperCase();
+
+                            const row = targetBadge.closest('tr');
+                            const firstCol = row ? row.querySelector('td:first-child') : null;
+                            if (firstCol) {
+                                const oldNote = firstCol.querySelector('.ai-policy-evidence');
+                                if (oldNote) oldNote.remove();
+
+                                const noteDiv = document.createElement('div');
+                                noteDiv.className = 'ai-policy-evidence mt-1 small font-weight-normal text-muted';
+                                let quoteBlock = ev.evidence_quote 
+                                    ? `<br><span class="text-secondary"><i class="fas fa-quote-left text-primary mr-1"></i><em>"${ev.evidence_quote}"</em></span>` 
+                                    : '';
+                                noteDiv.innerHTML = `${ev.rationale} ${quoteBlock}`;
+                                firstCol.appendChild(noteDiv);
+                            }
+                        }
+                    });
+                }
+            } else {
+                alert("Errore nell'elaborazione del file: " + (data.message || "Risposta non valida"));
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-microchip mr-1"></i> Analizza Documento con AI';
+            console.error("Errore fetch risk appetite:", err);
+            alert("Errore durante l'invio del file o durante l'analisi LLM.");
+        });
+    });
+
+    // PULSANTE "APPLICA E RICALCOLA RISCHI" (HUMAN-IN-THE-LOOP)
+    document.getElementById('btn-recalculate-owasp')?.addEventListener('click', function() {
+        const metrics = recalculateOwaspMetrics();
+        const overallImpact = metrics.totalImpact;
+
+        // Aggiorna dinamicamente i dettagli di rischio per ciascuna card di minaccia
+        const detailCards = document.querySelectorAll('.risk-detail-card');
+        detailCards.forEach(card => {
+            const likelihoodElem = card.querySelector('.likelihood-val');
+            const impactElem = card.querySelector('.impact-val');
+            const badgeElem = card.querySelector('.risk-badge-detail');
+
+            if (likelihoodElem && impactElem && badgeElem) {
+                const likelihood = parseFloat(likelihoodElem.innerText) || 5;
+                // Imposta il nuovo impatto ricalcolato dall'utente
+                impactElem.innerText = overallImpact;
+
+                // Calcola la nuova severità combinando Likelihood fissa di catalogo e Impact modificato
+                const newSev = calculateOwaspSeverity(likelihood, overallImpact);
+                badgeElem.innerText = `${newSev} RISK`;
+
+                if (newSev === "CRITICAL" || newSev === "HIGH") {
+                    badgeElem.className = "badge badge-danger px-3 py-2 font-weight-bold risk-badge-detail";
+                } else if (newSev === "MEDIUM") {
+                    badgeElem.className = "badge badge-warning text-dark px-3 py-2 font-weight-bold risk-badge-detail";
+                } else {
+                    badgeElem.className = "badge badge-success px-3 py-2 font-weight-bold risk-badge-detail";
+                }
+            }
+        });
+
+        // Feedback visivo sul pulsante
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-check mr-1"></i> Punteggi Aggiornati!';
+        this.classList.remove('btn-success');
+        this.classList.add('btn-secondary');
+        setTimeout(() => {
+            this.innerHTML = originalText;
+            this.classList.remove('btn-secondary');
+            this.classList.add('btn-success');
+        }, 1500);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0">Asset type enrichment</h1>
+    </div>
+    <p class="text-muted mb-4">
+        It is necessary to report the information associated with the type of asset,
+        where this has not been explicitly indicated in the bpmn associated with the process in question.
+    </p>
+
+    <div class="row">
+        {% for task in task_list %}
+            <div class="col-md-6">
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="card-icon mr-3 icon-asset">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ task.name }}</h6>
+                        </div>
+                        <div class="ml-3 text-right">
+                            <form method="POST" action="{% url 'task_type_enrichment' systemId=systemId processId=task.process.pk %}">
+                                {% csrf_token %}
+                                {% if task.asset_type != None %}
+                                    <span class="badge badge-type">{{ task.asset_type }}</span>
+                                {% else %}
+                                    <select name="{{ task.pk }}" class="form-control form-control-sm mb-2">
+                                        {% for type in asset_type %}
+                                            <option value="{{ type.pk }}">{{ type.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4 px-md-4">
+
+    <div class="card mb-4 shadow-sm border-0 bg-light">
+        <div class="card-body text-center py-4">
+            <h1 class="h3 font-weight-bold text-dark mb-2">
+                <i class="fas fa-shield-virus mr-2 text-primary"></i>Risks Evaluation Overall Report
+            </h1>
+            <p class="text-muted mb-3">Target Process: <strong class="text-secondary">{{ processName }}</strong></p>
+            
+            <form method="POST" action="{% url 'threat_modeling_view' systemId=systemId processId=processId %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-secondary btn-sm px-4 rounded-pill shadow-xs">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to Threat Model
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        
+        <!-- SPOOFING -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-0 {% if spoofing == 'HIGH' or spoofing == 'CRITICAL' %}border-danger{% elif spoofing == 'MEDIUM' %}border-warning{% else %}border-success{% endif %}" style="border-left: 5px solid !important;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="card-title font-weight-bold text-dark mb-0">
+                            <i class="fas fa-user-secret mr-2 text-muted"></i> Spoofing
+                        </h5>
+                        <span class="badge {% if spoofing == 'HIGH' or spoofing == 'CRITICAL' %}badge-danger{% elif spoofing == 'MEDIUM' %}badge-warning{% else %}badge-success{% endif %} badge-pill px-3 py-2 font-weight-bold">
+                            {{ spoofing }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small">
+                        <strong>Museum Context Definition:</strong> An attacker impersonates a trusted entity (e.g., a lending institution, an insurance broker, or an art transport company) via spoofed emails or rogue interfaces to intercept loan approvals, manipulate logistics, or hijack official credentials.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAMPERING -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-0 {% if tampering == 'HIGH' or tampering == 'CRITICAL' %}border-danger{% elif tampering == 'MEDIUM' %}border-warning{% else %}border-success{% endif %}" style="border-left: 5px solid !important;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="card-title font-weight-bold text-dark mb-0">
+                            <i class="fas fa-file-signature mr-2 text-muted"></i> Tampering
+                        </h5>
+                        <span class="badge {% if tampering == 'HIGH' or tampering == 'CRITICAL' %}badge-danger{% elif tampering == 'MEDIUM' %}badge-warning{% else %}badge-success{% endif %} badge-pill px-3 py-2 font-weight-bold">
+                            {{ tampering }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small">
+                        <strong>Museum Context Definition:</strong> Unauthorized modification or malicious alteration of digital assets and operational data, such as changing financial liability values on insurance policies or modifying the artwork preservation logs inside the Condition Report.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- REPUDIATION -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-0 {% if repudiation == 'HIGH' or repudiation == 'CRITICAL' %}border-danger{% elif repudiation == 'MEDIUM' %}border-warning{% else %}border-success{% endif %}" style="border-left: 5px solid !important;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="card-title font-weight-bold text-dark mb-0">
+                            <i class="fas fa-history mr-2 text-muted"></i> Repudiation
+                        </h5>
+                        <span class="badge {% if repudiation == 'HIGH' or repudiation == 'CRITICAL' %}badge-danger{% elif repudiation == 'MEDIUM' %}badge-warning{% else %}badge-success{% endif %} badge-pill px-3 py-2 font-weight-bold">
+                            {{ repudiation }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small">
+                        <strong>Museum Context Definition:</strong> The inability to trace or legally prove who performed a critical administrative action (e.g., who authorized an artwork release or signed a lease contract) due to a lack of secure audit trails, digital signatures, or activity logs.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- INFORMATION DISCLOSURE -->
+        <div class="col-md-6 mb-4">
+            <span class="badge {% if informationdis == 'HIGH' or informationdis == 'CRITICAL' %}badge-danger{% elif informationdis == 'MEDIUM' %}badge-warning{% else %}badge-success{% endif %} badge-pill px-3 py-2 font-weight-bold"></span>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="card-title font-weight-bold text-dark mb-0">
+                            <i class="fas fa-unlock-alt mr-2 text-muted"></i> Information Disclosure
+                        </h5>
+                        <span class="badge {% if informationdis == 'HIGH' or informationdis == 'CRITICAL' %}badge-danger{% elif informationdis == 'MEDIUM' %}badge-warning{% else %}badge-success{% endif %} badge-pill px-3 py-2 font-weight-bold">
+                            {{ informationdis }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small">
+                        <strong>Museum Context Definition:</strong> Data breaches resulting in the exposure of confidential records, such as private patron data, legal loan agreements, financial valuation of fine art pieces, or confidential route timing for fine art transport vehicles.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- DENIAL OF SERVICE -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-0 {% if dos == 'HIGH' or dos == 'CRITICAL' %}border-danger{% elif dos == 'MEDIUM' %}border-warning{% else %}border-success{% endif %}" style="border-left: 5px solid !important;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="card-title font-weight-bold text-dark mb-0">
+                            <i class="fas fa-server mr-2 text-muted"></i> Denial of Service
+                        </h5>
+                        <span class="badge {% if dos == 'HIGH' or dos == 'CRITICAL' %}badge-danger{% elif dos == 'MEDIUM' %}badge-warning{% else %}badge-success{% endif %} badge-pill px-3 py-2 font-weight-bold">
+                            {{ dos }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small">
+                        <strong>Museum Context Definition:</strong> Disruptions rendering the museum's scheduling or collection management software unavailable. This prevents curators and registrar staff from verifying insurance coverages or generating manifest data on transport days.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ELEVATION OF PRIVILEGE -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-0 {% if eop == 'HIGH' or eop == 'CRITICAL' %}border-danger{% elif eop == 'MEDIUM' %}border-warning{% else %}border-success{% endif %}" style="border-left: 5px solid !important;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="card-title font-weight-bold text-dark mb-0">
+                            <i class="fas fa-key mr-2 text-muted"></i> Elevation of Privilege
+                        </h5>
+                        <span class="badge {% if eop == 'HIGH' or eop == 'CRITICAL' %}badge-danger{% elif eop == 'MEDIUM' %}badge-warning{% else %}badge-success{% endif %} badge-pill px-3 py-2 font-weight-bold">
+                            {{ eop }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted small">
+                        <strong>Museum Context Definition:</strong> A low-privilege user (e.g., an external courier or general exhibition helper) bypasses software boundaries to gain administrative access, enabling them to wipe loan history or alter security permissions across the inventory database.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js"></script>
+
+<div class="container py-4">
+
+    <div class="card mb-4 shadow-sm border-0 bg-light">
+        <div class="card-body p-4">
+            <h1 class="h3 font-weight-bold text-dark mb-2">
+                <i class="fas fa-project-diagram text-primary mr-2"></i>Data Type Enrichment
+            </h1>
+            <p class="text-muted mb-0">
+                It is necessary to report which of the Functional Tasks present within the process use the Data Objects listed below to compute data propagation vulnerabilities.
+            </p>
+        </div>
+    </div>
+
+    <form method="POST" action="{% url 'task_manage_data' systemId=systemId processId=processId %}">
+        {% csrf_token %}
+
+        <style>
+            .custom-card-table tbody {
+                display: block;
+                width: 100%;
+            }
+            .custom-card-table tr {
+                display: block;
+                background: #ffffff;
+                border: 1px solid #e3e6f0 !important;
+                border-radius: 0.5rem !important;
+                padding: 1.5rem !important;
+                margin-bottom: 1.5rem !important;
+                box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.04) !important;
+            }
+            .custom-card-table td {
+                display: block;
+                border: none !important;
+                padding: 0.5rem 0 !important;
+                width: 100% !important;
+            }
+            .bootstrap-select .bs-ok-default::after {
+                width: 0.3em;
+                height: 0.6em;
+                border-width: 0 0.1em 0.1em 0;
+                transform: rotate(45deg) translateY(0.5rem);
+            }
+            .btn.dropdown-toggle:focus {
+                outline: none !important;
+            }
+            .sub-task-box {
+                background-color: #f8f9fc;
+                border-left: 4px solid #4e73df;
+                padding: 1rem;
+                margin-top: 0.75rem;
+                border-radius: 0 0.35rem 0.35rem 0;
+            }
+        </style>
+
+        <table class="table custom-card-table border-0">
+            <tbody id="enrichment-cards-pool">
+            {% for data in list_data %}
+                <tr class="asset-card" data-asset-index="{{ forloop.counter0 }}" data-asset-name="{% if data.name %}{{ data.name }}{% else %}{{ data }}{% endif %}">
+                    <td>
+                        <div class="d-flex align-items-center mb-2 border-bottom pb-2">
+                            <div class="mr-3 text-primary bg-light p-2 rounded-circle text-center" style="min-width: 40px;">
+                                <i class="fas fa-file-invoice" style="font-size: 1.2rem;"></i>
+                            </div>
+                            <div>
+                                <span class="text-uppercase text-muted font-weight-bold small tracking-wider" style="font-size: 70%;">DataObject Asset</span>
+                                <h5 class="font-weight-bold text-dark mb-0 mt-0">{% if data.name %}{{ data.name }}{% else %}{{ data }}{% endif %}</h5>
+                                <small class="text-secondary font-weight-bold">Type: {{ data.asset_type|default:"DataObject" }}</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-10 mx-auto">
+                                <label class="font-weight-bold text-secondary small text-uppercase mb-2 d-block">
+                                    <i class="fas fa-tasks mr-1 text-muted"></i> Select the tasks that use this DataObject
+                                </label>
+
+                                <select id="select-master-{{ forloop.counter0 }}" name="{% if data.bpmn_id %}{{ data.bpmn_id }}{% else %}{{ data }}{% endif %}" multiple 
+                                        data-style="btn-white border px-4 py-2 text-dark bg-white shadow-xs rounded-pill" class="selectpicker w-100 task-master-picker">
+                                    {% for task in list_task %}
+                                        <option value="{{ task }}" data-task-index="{{ forloop.counter0 }}">{{ task }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-10 mx-auto">
+                                {% with asset_idx=forloop.counter0 %}
+                                    {% for task in list_task %}
+                                        <div id="sub-box-{{ asset_idx }}-{{ forloop.counter0 }}" class="sub-task-box animate-fade-in" style="display: none">
+                                            <label class="font-weight-bold text-dark small mb-2 d-block">
+                                                <i class="fas fa-exchange-alt mr-1 text-primary"></i> Data Directionality for <strong>{{ task }}</strong>:
+                                            </label>
+                                            <select name="multiple" class="selectpicker w-100 direction-sub-picker" data-style="btn-white border px-3 py-2 text-dark bg-white shadow-xs rounded">
+                                                <option value="">Select Direction</option>
+                                                <option value="1">Input (Task Reads Data)</option>
+                                                <option value="0">Output (Task Writes Data)</option>
+                                            </select>
+                                        </div>
+                                    {% endfor %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="text-center mt-4 mb-5">
+            <button type="submit" class="btn btn-success btn-md px-5 font-weight-bold shadow-sm py-2" style="min-width: 280px;">
+                <i class="fas fa-save mr-2"></i> Save Enrichment Data
+            </button>
+        </div>
+    </form>
+</div>
+
+{{ task_with_data|json_script:"auto-mappings-data" }}
+
+<script>
+    $(document).ready(function () {
+        
+        // Legge i dati in modo pulito e sicuro senza tag di loop nel JS
+        const autoMappings = JSON.parse(document.getElementById('auto-mappings-data').textContent);
+
+        // 1. AUTOMAZIONE INTEGRALE ALL'APERTURA DELLA SCHERMATA
+        $('.asset-card').each(function() {
+            const card = $(this);
+            const assetIndex = card.data('asset-index');
+            const assetName = card.data('asset-name').toString().trim();
+            const masterPicker = $(`#select-master-${assetIndex}`);
+
+            const matchingRecords = autoMappings.filter(m => m.data.trim() === assetName);
+            
+            if (matchingRecords.length > 0) {
+                const taskNamesToSelect = matchingRecords.map(m => m.task);
+                
+                masterPicker.val(taskNamesToSelect);
+                masterPicker.selectpicker('refresh');
+
+                matchingRecords.forEach(function(record) {
+                    const optionToken = masterPicker.find(`option[value="${record.task}"]`);
+                    if (optionToken.length > 0) {
+                        const taskIndex = optionToken.data('task-index');
+                        const targetSubBoxId = `#sub-box-${assetIndex}-${taskIndex}`;
+                        
+                        $(targetSubBoxId).show();
+
+                        if (record.direction) {
+                            const subSelect = $(targetSubBoxId).find('select');
+                            subSelect.val(record.direction);
+                            subSelect.selectpicker('refresh');
+                        }
+                    }
+                });
+            }
+        });
+
+        // 2. INTERATTIVITÀ UTENTE
+        $('.task-master-picker').on('change', function () {
+            const picker = $(this);
+            const assetIndex = picker.closest('.asset-card').data('asset-index');
+            const selectedValues = picker.val() || [];
+
+            picker.find('option').each(function() {
+                const option = $(this);
+                const taskName = option.val();
+                const taskIndex = option.data('task-index');
+                const targetSubBoxId = `#sub-box-${assetIndex}-${taskIndex}`;
+
+                if (selectedValues.indexOf(taskName) >= 0) {
+                    $(targetSubBoxId).fadeIn(200);
+                } else {
+                    $(targetSubBoxId).hide();
+                    $(targetSubBoxId).find('select').val('').selectpicker('refresh');
+                }
+            });
+        });
+    });
+</script>
+
+<style>
+    .shadow-xs { box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; }
+    .animate-fade-in { animation: fadeIn 0.3s ease-in-out forwards; }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}

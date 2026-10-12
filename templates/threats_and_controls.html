@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<div class="container-fluid py-4 px-md-4">
+
+    <!-- TOP ARCHITECTURAL HEADER & MAIN ACTION LAYER -->
+    <div class="card mb-4 shadow-sm border-0 bg-light">
+        <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap">
+            <div class="mb-3 mb-md-0">
+                <span class="text-uppercase text-primary font-weight-bold small tracking-wider" style="font-size: 75%;">Analysis Registry Engine</span>
+                <h1 class="h3 font-weight-bold text-dark mb-1 mt-1" id="process-heading-title">
+                    <i class="fas fa-shield-virus text-danger mr-2"></i>Threats & Policies Matrix: {{ process_name }}
+                </h1>
+                <p class="text-muted mb-0 small">
+                    Review the identified STRIDE vulnerabilities alongside the recommended Center for Internet Security (CIS) baseline safeguards.
+                </p>
+            </div>
+            
+            <!-- MAIN EXECUTION CALL TO ACTION -->
+            <div class="mt-2 mt-md-0">
+                <form method="POST" action="{% url 'threat_modeling_view' systemId=systemId processId=processId %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary font-weight-bold shadow-sm px-4 py-2 rounded-pill transition-btn">
+                        <i class="fas fa-calculator mr-2"></i>Start Risk Analysis Process
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI RISK EXECUTIVE SUMMARY LAYER -->
+    <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #4e73df !important; background-color: #f8faff; border-radius: 0.5rem;">
+        <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div class="d-flex align-items-center mb-2 mb-sm-0">
+                    <div class="text-primary bg-white p-2 rounded-circle shadow-xs mr-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <span class="font-weight-bold text-dark small text-uppercase" style="letter-spacing: 0.05em;">AI Risk Executive Summary</span>
+                </div>
+                <button type="button" id="btn-generate-summary" class="btn btn-xs btn-outline-primary font-weight-bold py-1 px-3 shadow-xs" style="border-radius: 15px; font-size: 80%;">
+                    <i class="fas fa-robot mr-1"></i> Generate AI Risk Summary
+                </button>
+            </div>
+            
+            <div id="ai-summary-content" class="mt-2 text-secondary small d-none" style="font-size: 88%; line-height: 1.6;"></div>
+        </div>
+    </div>
+
+    <!-- MAIN TWO-COLUMN DASHBOARD LAYER -->
+    <div class="row">
+        
+        <!-- COLONNA SINISTRA: THREATS DISCOVERED (STRIDE ECOSYSTEM) -->
+        <div class="col-xl-5 col-lg-6 mb-4">
+            <div class="card shadow-sm border-0 h-100 bg-white" style="border-radius: 0.5rem; border: 1px solid #e3e6f0 !important;">
+                <div class="card-header bg-transparent border-bottom py-3 px-4">
+                    <h5 class="font-weight-bold text-dark mb-0">
+                        <i class="fas fa-spider text-warning mr-2"></i>Identified Threat Vectors
+                    </h5>
+                    <small class="text-muted">Exploits calculated based on active infrastructure and asset exposure.</small>
+                </div>
+                <div class="card-body p-4" style="max-height: 700px; overflow-y: auto;">
+                    {% for threat in clear_list_threats %}
+                        <div class="card mb-3 border-left-danger shadow-xs bg-light-card threat-item-card">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-start">
+                                    <div class="text-danger mr-3 mt-1" style="font-size: 1.1rem;">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="font-weight-bold text-dark mb-0 pr-2 threat-title">{{ threat.name }}</h6>
+                                            
+                                            {% with risk=threat.risk %}
+                                                {% if risk %}
+                                                    {% if risk|lower == 'high' or risk == '3' %}
+                                                        <span class="badge badge-danger badge-pill px-2 py-1 small font-weight-bold">High Risk</span>
+                                                    {% elif risk|lower == 'medium' or risk == '2' %}
+                                                        <span class="badge badge-warning badge-pill px-2 py-1 small font-weight-bold text-dark">Medium Risk</span>
+                                                    {% elif risk|lower == 'low' or risk == '1' %}
+                                                        <span class="badge badge-success badge-pill px-2 py-1 small font-weight-bold">Low Risk</span>
+                                                    {% else %}
+                                                        <span class="badge badge-secondary badge-pill px-2 py-1 small font-weight-bold">{{ risk }}</span>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endwith %}
+                                        </div>
+                                        
+                                        {% if threat.description %}
+                                            <p class="mb-0 text-muted small" style="line-height: 1.35; text-align: justify;">{{ threat.description }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-check-circle text-success mb-2" style="font-size: 2rem;"></i>
+                            <p class="small mb-0">No immediate threat mutations detected for this boundary window.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- COLONNA DESTRA: RECOMMENDED DEFENSIVE CONTROLS (CLEAN CIS LAYER) -->
+        <div class="col-xl-7 col-lg-6 mb-4">
+            <div class="card shadow-sm border-0 h-100 bg-white" style="border-radius: 0.5rem; border: 1px solid #e3e6f0 !important;">
+                <div class="card-header bg-transparent border-bottom py-3 px-4">
+                    <h5 class="font-weight-bold text-dark mb-0">
+                        <i class="fas fa-user-shield text-success mr-2"></i>Recommended Defensive Controls
+                    </h5>
+                    <small class="text-muted">CIS Framework safeguards automatically aligned to mitigate threat vectors.</small>
+                </div>
+                <div class="card-body p-4" style="max-height: 700px; overflow-y: auto;">
+                    {% for control in clear_list_controls %}
+                        <div class="card mb-3 shadow-xs border-0 cis-control-card">
+                            <div class="card-body p-3 border rounded bg-white">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="text-success mr-2" style="font-size: 1.1rem;">
+                                        <i class="fas fa-shield-alt"></i>
+                                    </div>
+                                    <h6 class="font-weight-bold text-dark mb-0 control-title">
+                                        CIS {{ control.id|default:"" }}: {{ control.name|default:control }}
+                                    </h6>
+                                </div>
+                                
+                                {% with risk=control.risk %}
+                                    {% if risk %}
+                                        <div class="mb-2 pl-4">
+                                            {% if risk|lower == 'high' or risk == '3' %}
+                                                <span class="badge bg-light text-danger border border-danger font-weight-bold" style="font-size: 65%;">Mitigates: High Risk</span>
+                                            {% elif risk|lower == 'medium' or risk == '2' %}
+                                                <span class="badge bg-light text-warning border border-warning font-weight-bold" style="font-size: 65%;">Mitigates: Medium Risk</span>
+                                            {% elif risk|lower == 'low' or risk == '1' %}
+                                                <span class="badge bg-light text-success border border-success font-weight-bold" style="font-size: 65%;">Mitigates: Low Risk</span>
+                                            {% else %}
+                                                <span class="badge badge-light border font-weight-bold" style="font-size: 65%;">Mitigates: {{ risk }}</span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+                                
+                                {% if control.description %}
+                                    <p class="mb-0 text-muted small pl-4" style="line-height: 1.4; text-align: justify;">{{ control.description }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-folder-open mb-2" style="font-size: 2rem;"></i>
+                            <p class="small mb-0">No mitigation controls mapped to the current process architecture.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- SCRIPT OLLAMA EXECUTIVE SUMMARY -->
+<!-- SCRIPT OLLAMA EXECUTIVE SUMMARY -->
+<script>
+    $(document).ready(function() {
+        $('#btn-generate-summary').on('click', function() {
+            const btn = $(this);
+            const summaryBox = $('#ai-summary-content');
+
+            // Estrazione minacce e controlli reali dalla schermata
+            let threats = [];
+            $('.threat-title').each(function() {
+                const t = $(this).text().trim();
+                if (t) threats.push(t);
+            });
+
+            let controls = [];
+            $('.control-title').each(function() {
+                const c = $(this).text().trim();
+                if (c) controls.push(c);
+            });
+
+            const rawHeading = $('#process-heading-title').text();
+            const processName = rawHeading.replace(/Threats & Policies Matrix:/i, '').trim() || "{{ process_name }}";
+
+            // BLOCCO CHIAMATA AJAX
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Generating Summary...');
+
+            $.ajax({
+                url: "{% url 'api_generate_executive_summary' %}",
+                method: 'GET',
+                data: {
+                    'process_name': processName,
+                    'threats[]': threats,
+                    'controls[]': controls
+                },
+                success: function(response) {
+                    btn.prop('disabled', false).html('<i class="fas fa-sync-alt mr-1"></i> Regenerate Summary');
+                    if (response.status === 'ok' && response.summary) {
+                        summaryBox.removeClass('d-none').hide().html('<hr class="my-2 border-top">' + response.summary).fadeIn(200);
+                    } else {
+                        alert('No summary generated.');
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html('<i class="fas fa-robot mr-1"></i> Generate AI Risk Summary');
+                    alert('Error connecting to Ollama service.');
+                }
+            });
+        });
+    });
+</script>
+
+<!-- DASHBOARD GRAPHIC CSS REFINEMENTS -->
+<style>
+    .shadow-xs { box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; }
+    .border-left-danger {
+        border-left: 4px solid #e74a3b !important;
+    }
+    .bg-light-card {
+        background-color: #f8f9fc;
+        border: 1px solid #eaecf1;
+    }
+    .cis-control-card {
+        transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    .cis-control-card:hover {
+        transform: translateX(3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.04) !important;
+    }
+    .transition-btn {
+        transition: all 0.2s ease-in-out;
+    }
+    .transition-btn:hover {
+        transform: scale(1.02);
+    }
+</style>
+{% endblock %}

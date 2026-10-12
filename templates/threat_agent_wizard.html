@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<div class="py-3" style="max-width: 1080px; margin: 0 auto;">
+
+    <!-- TOP HEADER -->
+    <div class="card mb-4 shadow-sm border-0 bg-light">
+        <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap">
+            <div class="mb-2 mb-md-0">
+                <span class="text-uppercase text-primary font-weight-bold small tracking-wider" style="font-size: 75%;">Adversary Profiling Layer</span>
+                <h1 class="h3 font-weight-bold text-dark mb-1 mt-1">
+                    <i class="fas fa-user-ninja text-danger mr-2"></i>Threat Agent Wizard
+                </h1>
+                <p class="text-muted mb-0 small">
+                    Establish threat agent boundaries for: <strong class="text-primary">{{ task.name|default:task|default:"Target Asset" }}</strong>
+                </p>
+            </div>
+            
+            <!-- AI PROFILE SUGGESTION BUTTON -->
+            <div class="mt-2 mt-md-0">
+                <button type="button" id="btn-suggest-threat-agent" class="btn btn-outline-primary font-weight-bold shadow-sm px-3 py-2 rounded-pill" style="font-size: 85%;">
+                    <i class="fas fa-magic mr-1"></i> Suggest Threat Profile with AI
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI RATIONALE BANNER -->
+    <div id="ai-agent-reason-box" class="alert alert-info py-2 px-3 mb-4 d-none font-italic shadow-xs" style="border-left: 4px solid #17a2b8; font-size: 88%;"></div>
+
+    <!-- WIZARD FORM -->
+    <form method="POST" action="" id="threatWizardForm">
+        {% csrf_token %}
+        <div class="card shadow-sm border-0 bg-white mb-4" style="border-radius: 0.5rem; border: 1px solid #e3e6f0 !important;">
+            <div class="card-body p-4">
+
+                <!-- QUESTION 1 -->
+                <div class="border-bottom pb-3 mb-4">
+                    <h6 class="font-weight-bold text-dark mb-2">
+                        <span class="badge badge-primary mr-2">Question 1</span>
+                        Are there someone who can gain an advantage implementing a cyber threat against your system?
+                    </h6>
+                    <div class="pl-3 mt-2">
+                        <div class="custom-control custom-checkbox mb-2">
+                            <input type="checkbox" class="custom-control-input agent-q1" id="q1_yes" name="q1" value="Yes">
+                            <label class="custom-control-label text-secondary" for="q1_yes">Yes</label>
+                        </div>
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input agent-q1" id="q1_no" name="q1" value="No, the threats that apply to the system are related only to non-hostile situations">
+                            <label class="custom-control-label text-secondary" for="q1_no">No, the threats that apply to the system are related only to non-hostile situations</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QUESTION 2 -->
+                <div class="border-bottom pb-3 mb-4">
+                    <h6 class="font-weight-bold text-dark mb-2">
+                        <span class="badge badge-primary mr-2">Question 2</span>
+                        Do you trust all employees and do you assume that they are not a possible Threat agent?
+                    </h6>
+                    <div class="pl-3 mt-2">
+                        <div class="custom-control custom-checkbox mb-2">
+                            <input type="checkbox" class="custom-control-input agent-q2" id="q2_trusted" name="q2" value="Consider as 'trusted' the employees">
+                            <label class="custom-control-label text-secondary" for="q2_trusted">Consider as 'trusted' the employees</label>
+                        </div>
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input agent-q2" id="q2_all" name="q2" value="Consider all threat agents">
+                            <label class="custom-control-label text-secondary" for="q2_all">Consider all threat agents</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QUESTION 3 -->
+                <div class="border-bottom pb-3 mb-4">
+                    <h6 class="font-weight-bold text-dark mb-2">
+                        <span class="badge badge-primary mr-2">Question 3</span>
+                        What are the goals of the attackers that represent the most threat to you?
+                    </h6>
+                    <div class="pl-3 mt-2 row">
+                        <div class="col-md-4 col-sm-6 mb-2">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input agent-q3" id="q3_copy" name="q3" value="Copy">
+                                <label class="custom-control-label text-secondary" for="q3_copy">Copy</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6 mb-2">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input agent-q3" id="q3_deny" name="q3" value="Deny">
+                                <label class="custom-control-label text-secondary" for="q3_deny">Deny</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6 mb-2">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input agent-q3" id="q3_destroy" name="q3" value="Destroy">
+                                <label class="custom-control-label text-secondary" for="q3_destroy">Destroy</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6 mb-2">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input agent-q3" id="q3_damage" name="q3" value="Damage">
+                                <label class="custom-control-label text-secondary" for="q3_damage">Damage</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6 mb-2">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input agent-q3" id="q3_take" name="q3" value="Take">
+                                <label class="custom-control-label text-secondary" for="q3_take">Take</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6 mb-2">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input agent-q3" id="q3_all" name="q3" value="All">
+                                <label class="custom-control-label text-secondary" for="q3_all">All</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QUESTION 4 -->
+                <div class="pb-3 mb-3">
+                    <h6 class="font-weight-bold text-dark mb-2">
+                        <span class="badge badge-primary mr-2">Question 4</span>
+                        What could be the expected results of a possible attacker in the phases of a possible attack on the software system?
+                    </h6>
+                    <div class="pl-3 mt-2 row">
+                        <div class="col-md-4 col-sm-6 mb-2">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input agent-q4" id="q4_theft" name="q4" value="Theft">
+                                <label class="custom-control-label text-secondary" for="q4_theft">Theft</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6 mb-2">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input agent-q4" id="q4_harm" name="q4" value="Cause harm">
+                                <label class="custom-control-label text-secondary" for="q4_harm">Cause harm</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6 mb-2">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input agent-q4" id="q4_embarassment" name="q4" value="Embarassment">
+                                <label class="custom-control-label text-secondary" for="q4_embarassment">Embarassment</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6 mb-2">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input agent-q4" id="q4_tech" name="q4" value="Tech Advantage">
+                                <label class="custom-control-label text-secondary" for="q4_tech">Tech Advantage</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6 mb-2">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input agent-q4" id="q4_business" name="q4" value="Business Advantage">
+                                <label class="custom-control-label text-secondary" for="q4_business">Business Advantage</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBMIT BUTTON -->
+                <div class="text-center pt-3 border-top">
+                    <button type="submit" class="btn btn-primary font-weight-bold px-5 py-2 rounded-pill shadow-sm">
+                        Submit Questions <i class="fas fa-check-circle ml-2"></i>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    $(document).ready(function() {
+        $('#btn-suggest-threat-agent').on('click', function() {
+            const btn = $(this);
+            const reasonBox = $('#ai-agent-reason-box');
+
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Profiling Adversary...');
+
+            $.ajax({
+                url: "{% url 'api_suggest_threat_agent' %}",
+                method: 'GET',
+                data: {
+                    'system_name': "{{ asset.name|default:'Art Loan Management System' }}"
+                },
+                success: function(response) {
+                    btn.prop('disabled', false).html('<i class="fas fa-magic mr-1"></i> Suggest Threat Profile with AI');
+
+                    if (response.status === 'ok' && response.result) {
+                        const res = response.result;
+
+                        $('input[type="checkbox"]').prop('checked', false);
+
+                        if (res.q1) {
+                            $('.agent-q1').filter(function() { return $(this).val().toLowerCase().includes(res.q1.toLowerCase()); }).prop('checked', true);
+                        }
+
+                        if (res.q2) {
+                            $('.agent-q2').filter(function() { return $(this).val().toLowerCase().includes(res.q2.toLowerCase()) || res.q2.toLowerCase().includes($(this).val().toLowerCase()); }).prop('checked', true);
+                        }
+
+                        if (res.q3 && Array.isArray(res.q3)) {
+                            res.q3.forEach(function(val) {
+                                $('.agent-q3').filter(function() { return $(this).val().toLowerCase() === val.toLowerCase(); }).prop('checked', true);
+                            });
+                        }
+
+                        if (res.q4 && Array.isArray(res.q4)) {
+                            res.q4.forEach(function(val) {
+                                $('.agent-q4').filter(function() { return $(this).val().toLowerCase() === val.toLowerCase(); }).prop('checked', true);
+                            });
+                        }
+
+                        if (res.reason) {
+                            reasonBox.removeClass('d-none').hide().html(
+                                '<i class="fas fa-brain mr-1"></i> <strong>AI Threat Landscape Assessment:</strong> ' + res.reason
+                            ).fadeIn(200);
+                        }
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html('<i class="fas fa-magic mr-1"></i> Suggest Threat Profile with AI');
+                    alert('Error connecting to Ollama agent profiling service.');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

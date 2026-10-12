@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<div class="container py-4">
+
+    <div class="card mb-4 shadow-sm border-0 bg-light">
+        <div class="card-body p-4">
+            <h1 class="h3 font-weight-bold text-dark mb-2">
+                <i class="fas fa-tags text-primary mr-2"></i>Process Asset Attribute Enrichment
+            </h1>
+            <p class="text-muted mb-0">
+                Refine the operational and communication channels for each discovered process node. These specific execution vectors feed directly into the STRIDE threat logic.
+            </p>
+        </div>
+    </div>
+
+    <p class="text-muted small mb-4">
+        It is necessary to report the information about attribute of each functional task, where this has not been explicitly indicated in the bpmn associated with the process in question.
+    </p>
+
+    <div class="row">
+        {% for task in task_info %}
+            {% if "object" not in task.0.asset_type.name.lower and "store" not in task.0.asset_type.name.lower %}
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100 shadow-sm border-0 bg-white asset-enrich-card" style="border: 1px solid #e3e6f0 !important; border-radius: 0.5rem;">
+                    <div class="card-body p-4 d-flex flex-column justify-content-between" style="min-height: 360px; position: relative;">
+                        
+                        <div>
+                            <div class="d-flex align-items-center mb-3 border-bottom pb-2">
+                                <div class="text-primary bg-light p-2 rounded-circle text-center mr-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; min-width: 40px;">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                                <div>
+                                    <h5 class="font-weight-bold text-dark mb-0">{{ task.0.name }}</h5>
+                                    <span class="badge badge-info small text-uppercase mt-1 shadow-xs font-weight-bold" style="font-size: 70%; letter-spacing: 0.05em;">
+                                        Type: {{ task.0.asset_type }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="form-group mt-3">
+                                {% if task.1 != 'empty' %}
+                                    <label class="text-muted font-weight-bold small text-uppercase tracking-wider d-block mb-2">Configured Operational Properties:</label>
+                                    <div class="bg-light p-3 rounded border border-dashed">
+                                        {% for attribute in task.1 %}
+                                            <span class="badge badge-light border text-dark font-weight-bold px-3 py-2 my-1 d-block text-left shadow-xs">
+                                                <i class="fas fa-check-circle text-success mr-1"></i> Channel Profile: {{ attribute }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <form method="POST" action="{% url 'process_enrichment' systemId=systemId processId=task.0.process.pk %}">
+                                        {% csrf_token %}
+                                        
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <label class="text-secondary font-weight-bold small text-uppercase tracking-wider mb-0">
+                                                <span>Select Technical Execution Channel</span>
+                                                <i class="fas fa-lightbulb text-warning ml-1" data-toggle="tooltip" title="Choose the technology layer through which this task exchanges metadata or assets."></i>
+                                            </label>
+
+                                            <button type="button" 
+                                                    class="btn btn-xs btn-outline-primary font-weight-bold btn-ai-task py-1 px-2 shadow-xs" 
+                                                    style="font-size: 75%; border-radius: 12px;"
+                                                    data-task-name="{{ task.0.name }}" 
+                                                    data-task-type="{{ task.0.asset_type.name }}"
+                                                    data-select-id="select-channel-{{ forloop.counter0 }}"
+                                                    data-reason-id="ai-reason-{{ forloop.counter0 }}">
+                                                <i class="fas fa-robot mr-1"></i> Suggest with AI
+                                            </button>
+                                        </div>
+
+                                        <select id="select-channel-{{ forloop.counter0 }}" name="{{ task.0.pk }}" class="form-control text-dark bg-white mb-2 shadow-xs" style="height: 42px !important; border-radius: 8px !important; display: block !important; width: 100% !important; padding: 0.375rem 2rem 0.375rem 0.75rem !important;" required>
+                                            <option value="" disabled selected>Click to classify vector...</option>
+                                            
+                                            {% if task.0.asset_type.name == "Send task" %}
+                                                {% for value in send %}<option value="{{ value.pk }}">{{ value.attribute_value }}</option>{% endfor %}
+                                            {% elif task.0.asset_type.name == "Receive task" %}
+                                                {% for value in receive %}<option value="{{ value.pk }}">{{ value.attribute_value }}</option>{% endfor %}
+                                            {% elif task.0.asset_type.name == "User task" %}
+                                                {% for value in user %}<option value="{{ value.pk }}">{{ value.attribute_value }}</option>{% endfor %}
+                                            {% elif task.0.asset_type.name == "Manual task" %}
+                                                {% for value in manual %}<option value="{{ value.pk }}">{{ value.attribute_value }}</option>{% endfor %}
+                                            {% elif task.0.asset_type.name == "Service task" %}
+                                                {% for attr in service %}<option value="{{ attr.pk }}">{{ attr.attribute_value.value }}</option>{% endfor %}
+                                            {% elif task.0.asset_type.name == "Script task" %}
+                                                {% for value in script %}<option value="{{ value.pk }}">{{ value.attribute_value }}</option>{% endfor %}
+                                            {% elif task.0.asset_type.name == "Business rule task" %}
+                                                {% for value in business %}<option value="{{ value.pk }}">{{ value.attribute_value }}</option>{% endfor %}
+                                            {% endif %}
+                                        </select>
+
+                                        <div id="ai-reason-{{ forloop.counter0 }}" class="alert alert-info py-1 px-2 mb-2 d-none font-italic" style="font-size: 80%; border-left: 3px solid #17a2b8;"></div>
+
+                                        <button type="submit" class="btn btn-primary btn-sm px-4 shadow-sm font-weight-bold mt-1" style="border-radius: 20px; height: 38px;">
+                                            <i class="fas fa-save mr-1"></i> Save Channel
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-2 border-top bg-light-hint p-3 rounded shadow-xs">
+                            <span class="text-uppercase text-muted font-weight-bold tracking-wider d-block mb-2" style="font-size: 70%;">
+                                <i class="fas fa-shield-alt mr-1"></i> Security Impact Definitions
+                            </span>
+                            <div class="small text-secondary" style="font-size: 85%; line-height: 1.4;">
+                                <ul class="list-unstyled mb-0 row">
+                                    <li class="col-6 mb-2 text-hover-trigger" data-desc="Online vectors introduce remote accessibility. They are vulnerable to distributed Denial of Service (DoS) and external cross-boundary Spoofing attacks.">
+                                        <i class="fas fa-wifi text-primary mr-1"></i> <u>Online</u>
+                                    </li>
+                                    <li class="col-6 mb-2 text-hover-trigger" data-desc="Offline components completely sever network interfaces. This restricts the potential threat zone strictly to physical security breach domains.">
+                                        <i class="fas fa-plane-slash text-muted mr-1"></i> <u>Offline</u>
+                                    </li>
+                                    <li class="col-6 mb-2 text-hover-trigger" data-desc="PEC Communication enforces strong legal and cryptographic non-repudiation, heavily mitigating STRIDE Repudiation vulnerabilities.">
+                                        <i class="fas fa-envelope-open-text text-success mr-1"></i> <u>PEC Mail</u>
+                                    </li>
+                                    <li class="col-6 mb-2 text-hover-trigger" data-desc="Standard Mail streams lack out-of-the-box origin signature validation, creating exposure to Tampering and header Spoofing scripts.">
+                                        <i class="fas fa-envelope text-danger mr-1"></i> <u>Standard Mail</u>
+                                    </li>
+                                    <li class="col-6 mb-2 text-hover-trigger" data-desc="Physical mail transit severs cyber vectors but creates exposure to physical Tampering, theft, or unauthorized Information Disclosure during transport.">
+                                        <i class="fas fa-box text-warning mr-1"></i> <u>Post Office</u>
+                                    </li>
+                                    <li class="col-6 mb-2 text-hover-trigger" data-desc="Automated application-to-application data exchange. Requires strict API authentication to prevent Spoofing, Tampering, and Elevation of Privilege.">
+                                        <i class="fas fa-network-wired text-info mr-1"></i> <u>Interoperability</u>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="dynamic-explanation-box text-primary font-weight-bold small mt-2 border-top pt-2" style="display:none; font-style: italic; min-height: 35px; font-size: 82%;"></div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- CALL TO ACTION / NEXT STEP LAYER -->
+    <div class="card border-0 shadow-sm mt-4 mb-5" style="border-left: 5px solid #28a745 !important; background-color: #f8fff9; border-radius: 0.5rem;">
+        <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap">
+            <div class="mb-3 mb-md-0">
+                <span class="text-uppercase text-success font-weight-bold small tracking-wider" style="font-size: 75%;">Step Completed</span>
+                <h5 class="font-weight-bold text-dark mb-1">Process Execution Channels Configured</h5>
+                <p class="text-muted mb-0 small">All discovered operational nodes have been successfully enriched with technological execution vectors.</p>
+            </div>
+            <div>
+                <form method="POST" action="{% url 'threat_modeling_view' systemId=systemId processId=processId %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success font-weight-bold shadow-sm px-4 py-2 rounded-pill transition-btn">
+                        Proceed to Threats & Policies Matrix <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    $(document).ready(function () {
+        $('[data-toggle="tooltip"]').tooltip({ container: 'body' });
+
+        $('.text-hover-trigger').on('mouseenter click', function(e) {
+            e.stopPropagation();
+            const explanation = $(this).data('desc');
+            const targetBox = $(this).closest('.asset-enrich-card').find('.dynamic-explanation-box');
+            targetBox.html('<i class="fas fa-fingerprint mr-1 text-dark"></i> ' + explanation).stop(true, true).fadeIn(150);
+        });
+
+        $('.text-hover-trigger').on('mouseleave', function() {
+            const targetBox = $(this).closest('.asset-enrich-card').find('.dynamic-explanation-box');
+            targetBox.stop(true, true).fadeOut(100);
+        });
+
+        // GESTIONE CLICK PULSANTE AI TASK
+        $('.btn-ai-task').on('click', function () {
+            const btn = $(this);
+            const taskCard = btn.closest('.asset-enrich-card');
+            const taskName = btn.data('task-name');
+            const selectId = btn.data('select-id');
+            const reasonId = btn.data('reason-id');
+            const selectElement = $('#' + selectId);
+            const reasonBox = $('#' + reasonId);
+
+            let realOptions = [];
+            selectElement.find('option').each(function() {
+                const txt = $(this).text().trim();
+                if (txt && !txt.includes('Click to classify')) {
+                    realOptions.push(txt);
+                }
+            });
+
+            let taskType = btn.data('task-type') || '';
+            if (!taskType) {
+                taskType = taskCard.find('.badge-info').text().replace(/Type:/i, '').trim();
+            }
+
+            // BLOCCO CHIAMATA AJAX CON TESTI IN INGLESE
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Analyzing...');
+
+            $.ajax({
+                url: '/api/suggest-task-attribute/',
+                method: 'GET',
+                data: { 
+                    'task_name': taskName,
+                    'task_type': taskType,
+                    'options': JSON.stringify(realOptions)
+                },
+                success: function (response) {
+                    btn.prop('disabled', false).html('<i class="fas fa-robot mr-1"></i> Suggest with AI');
+
+                    if (response.status === 'ok' && response.result.selected_attribute) {
+                        const targetAttr = response.result.selected_attribute.toLowerCase().trim();
+
+                        selectElement.find('option').each(function () {
+                            const optText = $(this).text().toLowerCase().trim();
+                            if (optText && (optText === targetAttr || optText.includes(targetAttr) || targetAttr.includes(optText))) {
+                                $(this).prop('selected', true);
+                                selectElement.val($(this).val()).trigger('change');
+                                return false;
+                            }
+                        });
+
+                        if (response.result.confidence_reason) {
+                            reasonBox.removeClass('d-none').html(
+                                '<i class="fas fa-brain mr-1"></i> <strong>AI Assessment:</strong> ' + response.result.confidence_reason
+                            );
+                        }
+                    }
+                },
+                error: function () {
+                    btn.prop('disabled', false).html('<i class="fas fa-robot mr-1"></i> Suggest with AI');
+                    alert('Error connecting to Ollama service.');
+                }
+            });
+        });
+    });
+</script>
+
+<style>
+    .shadow-xs { box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; }
+    .bg-light-hint { background-color: #f8f9fc; border: 1px solid #eaecf1; }
+    .text-hover-trigger { cursor: pointer; transition: color 0.15s ease; }
+    .text-hover-trigger:hover { color: #4e73df !important; }
+    .asset-enrich-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .asset-enrich-card:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.06) !important; }
+    .transition-btn { transition: all 0.2s ease-in-out; }
+    .transition-btn:hover { transform: scale(1.02); }
+</style>
+{% endblock %}

@@ -1,0 +1,372 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<style>
+    a.tip {
+        text-decoration: none
+    }
+
+    a.tip:hover {
+        cursor: help;
+        position: relative
+    }
+
+    a.tip span {
+        display: none
+    }
+
+    a.tip:hover span {
+        border: #c0c0c0 1px dotted;
+        padding: 5px 20px 5px 5px;
+        display: block;
+        z-index: 100;
+        background: #f0f0f0 no-repeat 100% 5%;
+        left: 0px;
+        margin: 10px;
+        width: 250px;
+        position: absolute;
+        top: 10px;
+        text-decoration: none
+    }
+
+    table {
+        font-family: arial, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    td, th {
+        text-align: left;
+        padding: 8px;
+    }
+
+    .ai-box {
+        background-color: #f8f9fa;
+        border: 1px solid #0d6efd;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .ai-badge-critical { background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+    .ai-badge-high { background-color: #fd7e14; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+    .ai-badge-medium { background-color: #ffc107; color: black; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+    .ai-badge-low { background-color: #198754; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+</style>
+
+<div class="container">
+    <!-- ASSISTENTE AI: RISK APPETITE ON-PREMISE -->
+    <div class="ai-box">
+        <h4 style="color: #0d6efd; margin-top: 0;">
+            <i class="glyphicon glyphicon-tasks"></i> Assistente AI: Valutazione Gravità da Policy Istituzionale
+        </h4>
+        <p style="color: #555; font-size: 13px;">
+            Interroga il modello locale <strong>Llama 3.2 (on-premise via Ollama)</strong> per calcolare la severità STRIDE coerentemente con la propensione al rischio museale (D.Lgs. 42/2004 e D.M. 29/01/2008).
+        </p>
+        <button type="button" class="btn btn-info" id="btn-suggest-risk-appetite">
+            Valuta Gravità da Policy con LLM Locale
+        </button>
+        
+        <div id="ai-feedback-container" style="display: none; margin-top: 15px; background: #e7f1ff; border-left: 4px solid #0d6efd; padding: 12px; border-radius: 4px;">
+            <strong style="color: #084298;">Analisi della Policy Istituzionale (Dati elaborati in locale):</strong>
+            <ul id="ai-rationale-list" style="margin-top: 8px; margin-bottom: 0; padding-left: 20px; font-size: 13px;"></ul>
+        </div>
+    </div>
+
+    <form method="POST" action="{% url 'risk_analysis' systemId=systemId processId=processId assetId=assetId %}">
+        {% csrf_token %}
+        <div class="panel panel-default">
+            <div>
+                <table border="1" style="width: 100%">
+                    <!-- SPOOFING -->
+                    <tr style="border-bottom: 1px solid #ddd">
+                        <td style="padding: 10px;" width="25%">
+                            <div style="padding: 3px;">
+                                <b>Stride: </b>
+                                <p>SPOOFING</p>
+                                <b>Description: </b>
+                                <p>Threats related to the interception or impersonation of identity and data in transit</p>
+                            </div>
+                        </td>
+                        <td style="padding: 10px;" width="75%">
+                            <div style="padding: 3px; font-size: 120%;">
+                                <p>How much impact does a Spoofing threat have on application?</p>
+                                <table border="1" style="width: 100%">
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Financial damage<span>Less than cost to fix (1), minor effect on profit (3), significant effect (7), bankruptcy (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="spoofing_financialdamage"></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Reputation damage<span>Minimal (1), Loss of major accounts (4), loss of goodwill (5), brand damage (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="spoofing_reputationdamage"></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Non-compliance<span>Minor violation (2), clear violation (5), high profile violation (7)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="spoofing_noncompliance"></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a class="tip">Privacy violation<span>One individual (3), hundreds (5), thousands (7), millions (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="spoofing_privacyviolation"></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- TAMPERING -->
+                    <tr style="border-bottom: 1px solid #ddd">
+                        <td style="padding: 10px;" width="25%">
+                            <div style="padding: 3px;">
+                                <b>Stride: </b>
+                                <p>TAMPERING</p>
+                                <b>Description: </b>
+                                <p>Threats related to data or artifact manipulation</p>
+                            </div>
+                        </td>
+                        <td style="padding: 10px;" width="75%">
+                            <div style="padding: 3px; font-size: 120%;">
+                                <p>How much impact does a Tampering threat have on application?</p>
+                                <table border="1" style="width: 100%">
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Financial damage<span>Cost to fix (1), minor effect (3), significant effect (7), bankruptcy (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="tampering_financialdamage"></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Reputation damage<span>Minimal (1), Loss of accounts (4), loss of goodwill (5), brand damage (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="tampering_reputationdamage"></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Non-compliance<span>Minor (2), clear (5), high profile (7)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="tampering_noncompliance"></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a class="tip">Privacy violation<span>One individual (3), hundreds (5), thousands (7), millions (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="tampering_privacyviolation"></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- REPUDIATION (Nota: nel template originale era etichettato REPUTATION) -->
+                    <tr style="border-bottom: 1px solid #ddd">
+                        <td style="padding: 10px;" width="25%">
+                            <div style="padding: 3px;">
+                                <b>Stride: </b>
+                                <p>REPUDIATION</p>
+                                <b>Description: </b>
+                                <p>Threats where an actor denies having performed an action or legal transaction</p>
+                            </div>
+                        </td>
+                        <td style="padding: 10px;" width="75%">
+                            <div style="padding: 3px; font-size: 120%;">
+                                <p>How much impact does a Repudiation threat have on application?</p>
+                                <table border="1" style="width: 100%">
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Financial damage<span>Cost to fix (1), minor effect (3), significant effect (7), bankruptcy (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="repudiation_financialdamage"></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Reputation damage<span>Minimal (1), Loss of accounts (4), loss of goodwill (5), brand damage (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="repudiation_reputationdamage"></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Non-compliance<span>Minor (2), clear (5), high profile (7)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="repudiation_noncompliance"></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a class="tip">Privacy violation<span>One individual (3), hundreds (5), thousands (7), millions (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="repudiation_privacyviolation"></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- INFORMATION DISCLOSURE -->
+                    <tr style="border-bottom: 1px solid #ddd">
+                        <td style="padding: 10px;" width="25%">
+                            <div style="padding: 3px;">
+                                <b>Stride: </b>
+                                <p>INFORMATION DISCLOSURE</p>
+                                <b>Description: </b>
+                                <p>Threats related to access to confidential and logistical information</p>
+                            </div>
+                        </td>
+                        <td style="padding: 10px;" width="75%">
+                            <div style="padding: 3px; font-size: 120%;">
+                                <p>How much impact does an Information Disclosure threat have on application?</p>
+                                <table border="1" style="width: 100%">
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Financial damage<span>Cost to fix (1), minor effect (3), significant effect (7), bankruptcy (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="informationdisclosure_financialdamage"></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Reputation damage<span>Minimal (1), Loss of accounts (4), loss of goodwill (5), brand damage (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="informationdisclosure_reputationdamage"></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Non-compliance<span>Minor (2), clear (5), high profile (7)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="informationdisclosure_noncompliance"></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a class="tip">Privacy violation<span>One individual (3), hundreds (5), thousands (7), millions (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="informationdisclosure_privacyviolation"></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- DENIAL OF SERVICES -->
+                    <tr style="border-bottom: 1px solid #ddd">
+                        <td style="padding: 10px;" width="25%">
+                            <div style="padding: 3px;">
+                                <b>Stride: </b>
+                                <p>DENIAL OF SERVICES</p>
+                                <b>Description: </b>
+                                <p>Attacks affecting process continuity and availability</p>
+                            </div>
+                        </td>
+                        <td style="padding: 10px;" width="75%">
+                            <div style="padding: 3px; font-size: 120%;">
+                                <p>How much impact does a Denial of Services threat have on application?</p>
+                                <table border="1" style="width: 100%">
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Financial damage<span>Cost to fix (1), minor effect (3), significant effect (7), bankruptcy (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="dos_financialdamage"></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Reputation damage<span>Minimal (1), Loss of accounts (4), loss of goodwill (5), brand damage (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="dos_reputationdamage"></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Non-compliance<span>Minor (2), clear (5), high profile (7)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="dos_noncompliance"></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a class="tip">Privacy violation<span>One individual (3), hundreds (5), thousands (7), millions (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="dos_privacyviolation"></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- ELEVATION OF PRIVILEGES -->
+                    <tr style="border-bottom: 1px solid #ddd">
+                        <td style="padding: 10px;" width="25%">
+                            <div style="padding: 3px;">
+                                <b>Stride: </b>
+                                <p>ELEVATION OF PRIVILEGES</p>
+                                <b>Description: </b>
+                                <p>Unauthorized privilege escalation on sensitive resources and systems</p>
+                            </div>
+                        </td>
+                        <td style="padding: 10px;" width="75%">
+                            <div style="padding: 3px; font-size: 120%;">
+                                <p>How much impact does an Elevation of Privileges threat have on application?</p>
+                                <table border="1" style="width: 100%">
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Financial damage<span>Cost to fix (1), minor effect (3), significant effect (7), bankruptcy (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="elevationofprivileges_financialdamage"></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Reputation damage<span>Minimal (1), Loss of accounts (4), loss of goodwill (5), brand damage (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="elevationofprivileges_reputationdamage"></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #ddd">
+                                        <td><a class="tip">Non-compliance<span>Minor (2), clear (5), high profile (7)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="elevationofprivileges_noncompliance"></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a class="tip">Privacy violation<span>One individual (3), hundreds (5), thousands (7), millions (9)</span></a></td>
+                                        <td><input type="number" min="0" max="9" value="5" name="elevationofprivileges_privacyviolation"></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <br><br>
+        <div style="text-align: center;">
+            <button type="submit" class="btn btn-primary btn-lg">Save Impact Evaluation</button>
+        </div>
+    </form>
+</div>
+
+<!-- JAVASCRIPT: LOGICA HUMAN-IN-THE-LOOP CON OLLAMA -->
+<script>
+document.getElementById('btn-suggest-risk-appetite')?.addEventListener('click', function() {
+    const btn = this;
+    const feedbackBox = document.getElementById('ai-feedback-container');
+    const list = document.getElementById('ai-rationale-list');
+
+    btn.disabled = true;
+    btn.innerHTML = 'Interrogazione Policy Llama 3.2 in corso...';
+
+    // Target coerente con il workflow di prestito dell'opera d'arte
+    const targetName = "Fine Art Loan Dossier & Logistics";
+
+    fetch(`/api/evaluate-risk-appetite/?name=${encodeURIComponent(targetName)}&type=ProcessAsset`)
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = 'Valuta Gravità da Policy con LLM Locale';
+
+            if (data.status === 'ok' && data.result && data.result.evaluations) {
+                feedbackBox.style.display = 'block';
+                list.innerHTML = '';
+
+                // Mappatura severità -> Punteggi OWASP suggeriti (da 0 a 9)
+                const severityScoreMap = {
+                    "CRITICAL": 8,
+                    "HIGH": 6,
+                    "MEDIUM": 4,
+                    "LOW": 2
+                };
+
+                data.result.evaluations.forEach(ev => {
+                    const category = ev.category.toLowerCase().replace(/[\s_]+/g, '');
+                    const badgeClass = `ai-badge-${ev.severity.toLowerCase()}`;
+                    
+                    // Renderizza la motivazione con badge visivo
+                    const li = document.createElement('li');
+                    li.style.marginBottom = '6px';
+                    li.innerHTML = `<strong>${ev.category}</strong>: <span class="${badgeClass}">${ev.severity}</span> — <em>${ev.rationale}</em>`;
+                    list.appendChild(li);
+
+                    // Pre-compila automaticamente i 4 fattori di impatto per ciascuna categoria
+                    const score = severityScoreMap[ev.severity.toUpperCase()] || 5;
+
+                    // Mappa i nomi dei campi nel form (es. tampering_financialdamage, etc.)
+                    const prefix = (category === 'denialofservice' || category === 'denialofservices') ? 'dos' : category;
+                    const fieldTypes = ['financialdamage', 'reputationdamage', 'noncompliance', 'privacyviolation'];
+
+                    fieldTypes.forEach(ftype => {
+                        const input = document.querySelector(`input[name="${prefix}_${ftype}"]`);
+                        if (input) {
+                            input.value = score;
+                            // Effetto visivo di evidenziazione temporanea del campo compilato
+                            input.style.backgroundColor = '#fff3cd';
+                            setTimeout(() => { input.style.backgroundColor = ''; }, 1200);
+                        }
+                    });
+                });
+            } else {
+                alert("Errore nell'analisi LLM: " + (data.message || "Risposta non valida"));
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = 'Valuta Gravità da Policy con LLM Locale';
+            console.error("Errore fetch risk appetite:", err);
+            alert("Errore di connessione con il servizio LLM locale.");
+        });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Records of processing activities</h1>
+    <p style="font-family: 'Times New Roman';font-size: medium">
+        It is necessary to report the information to generate the report register.
+    </p>
+        <form method="POST" action="{% url 'export_dataobject_to_bpmn' systemId=systemId %}">
+
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Process code</th>
+            <th>Type of treatment</th>
+            <th>Purposes of the processing</th>
+            <th>Categories of interested parties</th>
+            <th>Categories of personal data</th>
+            <th>Categories of recipients</th>
+            <th>Transfers of personal data to a third country</th>
+            <th>Terms of erasure of personal data</th>
+            <th>Security Measures</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        {% for processid, process in process_dataoutput.items %}
+            <tr>
+            <td>
+                {{ processid }}
+            </td>
+            <td style="font-family: 'Times New Roman';font-size: medium" ;>
+                <textarea rows = "5" cols = "20" name = "typeTreatment" placeholder="Insert details here"></textarea><br>
+            </td>
+            <td>
+                <ul>
+                {% for task in process.task_list %}
+                    <li>{{ task }}</li>
+                {% endfor %}
+                </ul>
+            </td>
+            <td>
+                <ul>
+                {% for actor in process.actors %}
+                    <li>{{ actor.name }}</li>
+                {% endfor %}
+                </ul>
+            </td>
+            <td>
+                <ul>
+                {% for data in process.dataobjects %}
+                    <li>{{ data }}</li>
+                {% endfor %}
+                </ul>
+            </td>
+            <td>
+
+                <textarea rows = "5" cols = "20" name = "Recipients" placeholder="Insert details here"></textarea><br>
+            </td>
+            <td>
+                <select id="country">
+                    <option>YES</option>
+                    <option>NO</option>
+                </select>
+            </td>
+            <td>
+                 <textarea rows = "5" cols = "20" name = "erasureData" placeholder="Insert details here"></textarea><br>
+            </td>
+            <td>
+                {% for single_control in control %}
+                    <li>{{ single_control }}</li>
+                    {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+
+
+        </tbody>
+    </table>
+        {% csrf_token %}
+        <input id="back" type="submit" class="btn btn-primary" value="Export as a CSV file"></input>
+    </form>
+
+
+{% endblock %}
